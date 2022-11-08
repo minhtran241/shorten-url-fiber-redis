@@ -95,10 +95,10 @@ List dependencies used in this system by using [github.com/ribice/glice](https:/
 
 ```
 {
-"url": "https://redis.io/commands/ttl/",
-"custom_short": "localhost:3000/ttl",
-"expiry": 50,
-"rate_limit": 9,
-"rate_limit_reset": 30
+    "url": "https://redis.io/commands/ttl/",
+    "custom_short": "localhost:3000/ttl",
+    "expiry": 50,
+    "rate_limit": 9,
+    "rate_limit_reset": 30
 }
 ```
