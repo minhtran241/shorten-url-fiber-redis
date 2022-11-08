@@ -21,11 +21,11 @@ type request struct {
 }
 
 type response struct {
-	URL            string        `json:"url"`
-	CustomShort    string        `json:"custom_short"`
-	Expiry         time.Duration `json:"expiry"`
-	XRateRemaining int           `json:"rate_limit"`
-	XRateLimitRest time.Duration `json:"rate_limit_reset"`
+	URL             string        `json:"url"`
+	CustomShort     string        `json:"custom_short"`
+	Expiry          time.Duration `json:"expiry"`
+	XRateRemaining  int           `json:"rate_limit"`
+	XRateLimitReset time.Duration `json:"rate_limit_reset"`
 }
 
 func ShortenURL(c *fiber.Ctx) error {
@@ -48,7 +48,7 @@ func ShortenURL(c *fiber.Ctx) error {
 	} else { // found
 		valInt, _ := strconv.Atoi(rateRemaining)
 		if valInt <= 0 { // if reach rate limit restriction
-			// get the remaining time for restriction (TTL of the pair)
+			// get the remaining time to reset (TTL of the pair)
 			limit, _ := r2.TTL(database.Ctx, c.IP()).Result()
 			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 				"error":           "rate limit exceeded",
@@ -89,8 +89,8 @@ func ShortenURL(c *fiber.Ctx) error {
 	r := database.CreateClient(0)
 	defer r.Close()
 
-	urlValue, _ := r.Get(database.Ctx, id).Result()
-	if urlValue != "" { // if the custom short is already used
+	actualURL, _ := r.Get(database.Ctx, id).Result()
+	if actualURL != "" { // if the custom short is already used
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "URL custom short is already used",
 		})
@@ -111,11 +111,11 @@ func ShortenURL(c *fiber.Ctx) error {
 	}
 
 	res := response{
-		URL:            body.URL,
-		CustomShort:    "",
-		Expiry:         body.Expiry,
-		XRateRemaining: 10,
-		XRateLimitRest: 30,
+		URL:             body.URL,
+		CustomShort:     "",
+		Expiry:          body.Expiry,
+		XRateRemaining:  10,
+		XRateLimitReset: 30,
 	}
 
 	// decrement the remaining access of the IP
@@ -126,8 +126,8 @@ func ShortenURL(c *fiber.Ctx) error {
 	// set XRateLimitRemaining
 	res.XRateRemaining, _ = strconv.Atoi(rateRemaining)
 	ttl, _ := r2.TTL(database.Ctx, c.IP()).Result()
-	// set the rate limit restriction by getting the TTL of the IP
-	res.XRateLimitRest = ttl / time.Nanosecond / time.Minute
+	// set the remaining time to reset by getting the TTL of the IP
+	res.XRateLimitReset = ttl / time.Nanosecond / time.Minute
 	// custom_short = domain/id
 	res.CustomShort = os.Getenv("DOMAIN") + "/" + id
 
